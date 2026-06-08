@@ -106,6 +106,19 @@
     #view-list li.active a       { color: #fff; font-weight: 500; }
     #view-list li.active a::before { background: #6c8fff; }
 
+    #room-name {
+      position: fixed;
+      top: 20px;
+      left: 24px;
+      z-index: 30;
+      color: rgba(255,255,255,0.85);
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+      text-shadow: 0 1px 8px rgba(0,0,0,0.6);
+    }
+
     #coords { display: none !important; }
 
     /* ── D-pad ── */
@@ -143,10 +156,43 @@
     }
     .dp:empty { background: transparent; border-color: transparent; pointer-events: none; }
     .dp.pressed { background: rgba(108,143,255,0.45); border-color: rgba(108,143,255,0.6); }
+
+    /* ── Room nav arrows ── */
+    #room-nav {
+      position: fixed;
+      bottom: 90px;
+      right: 24px;
+      z-index: 30;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .room-nav-btn {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.45);
+      transition: background 0.2s;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .room-nav-btn:hover { background: rgba(255,255,255,0.2); }
+    .room-nav-btn:active { background: rgba(108,143,255,0.45); }
   </style>
 </head>
 <body>
 
+<div id="room-name">Global View</div>
 <div id="overlay">
   <p id="overlay-title">Vyberte pohled</p>
   <ul id="view-list"></ul>
@@ -161,6 +207,10 @@
   <div class="dp"></div>
   <div class="dp"></div>
   <div class="dp"></div>
+</div>
+<div id="room-nav">
+  <button class="room-nav-btn" id="room-prev">&#9650;</button>
+  <button class="room-nav-btn" id="room-next">&#9660;</button>
 </div>
 <button id="menu-btn">&#9776;</button>
 <div id="coords"><div id="coords-text"></div><button id="coords-copy">Copy to clipboard</button></div>
@@ -188,6 +238,54 @@
       target:   new THREE.Vector3(0, 0, 0),
       autoRotate: true,
     },
+    room7: {
+      name: 'Bara Vchod',
+      position: new THREE.Vector3(-1.863, -1.691, 8.136),
+      target:   new THREE.Vector3(-2.128, -1.987, 7.218),
+      autoRotate: false,
+    },
+    room8: {
+      name: 'Bara Predsin',
+      position: new THREE.Vector3(-2.795, -1.735, 6.167),
+      target:   new THREE.Vector3(-2.545, -2.042, 5.249),
+      autoRotate: false,
+    },
+    room11: {
+      name: 'Bara Technicka chodba',
+      position: new THREE.Vector3(-2.161, -0.900, 1.593),
+      target:   new THREE.Vector3(-2.009, -1.313, 0.695),
+      autoRotate: false,
+    },
+    room12: {
+      name: 'Bara Uloziste',
+      position: new THREE.Vector3(-2.728, -1.106, -0.261),
+      target:   new THREE.Vector3(-3.267, -1.541, 0.460),
+      autoRotate: false,
+    },
+    room13: {
+      name: 'Bara Technicka mistnost',
+      position: new THREE.Vector3(-0.362, -1.207, -0.212),
+      target:   new THREE.Vector3(0.065, -1.451, 0.658),
+      autoRotate: false,
+    },
+    room9: {
+      name: 'Bara Loznice',
+      position: new THREE.Vector3(-0.172, -1.713, 3.118),
+      target:   new THREE.Vector3(0.518, -1.901, 3.817),
+      autoRotate: false,
+    },
+    room10: {
+      name: 'Bara Koupelna 2',
+      position: new THREE.Vector3(1.801, -1.539, 2.075),
+      target:   new THREE.Vector3(2.322, -1.889, 1.297),
+      autoRotate: false,
+    },
+    room5: {
+      name: 'Bara Schodiste',
+      position: new THREE.Vector3(-3.219, 0.412, 2.281),
+      target:   new THREE.Vector3(-2.605, 0.221, 3.046),
+      autoRotate: false,
+    },
     room1: {
       name: 'Bara Detsky pokoj 1',
       position: new THREE.Vector3(2.903, 0.392, 4.373),
@@ -212,58 +310,10 @@
       target:   new THREE.Vector3(-1.726, 1.136, 6.937),
       autoRotate: false,
     },
-    room5: {
-      name: 'Bara Schodiste',
-      position: new THREE.Vector3(-3.219, 0.412, 2.281),
-      target:   new THREE.Vector3(-2.605, 0.221, 3.046),
-      autoRotate: false,
-    },
     room6: {
       name: 'Bara Zachod',
       position: new THREE.Vector3(-3.493, 1.374, 6.198),
       target:   new THREE.Vector3(-3.099, 0.826, 6.935),
-      autoRotate: false,
-    },
-    room7: {
-      name: 'Bara Vchod',
-      position: new THREE.Vector3(-1.863, -1.691, 8.136),
-      target:   new THREE.Vector3(-2.128, -1.987, 7.218),
-      autoRotate: false,
-    },
-    room8: {
-      name: 'Bara Predsin',
-      position: new THREE.Vector3(-2.795, -1.735, 6.167),
-      target:   new THREE.Vector3(-2.545, -2.042, 5.249),
-      autoRotate: false,
-    },
-    room9: {
-      name: 'Bara Loznice',
-      position: new THREE.Vector3(-0.172, -1.713, 3.118),
-      target:   new THREE.Vector3(0.518, -1.901, 3.817),
-      autoRotate: false,
-    },
-    room10: {
-      name: 'Bara Koupelna 2',
-      position: new THREE.Vector3(1.801, -1.539, 2.075),
-      target:   new THREE.Vector3(2.322, -1.889, 1.297),
-      autoRotate: false,
-    },
-    room11: {
-      name: 'Bara Technicka chodba',
-      position: new THREE.Vector3(-2.161, -0.900, 1.593),
-      target:   new THREE.Vector3(-2.009, -1.313, 0.695),
-      autoRotate: false,
-    },
-    room12: {
-      name: 'Bara Uloziste',
-      position: new THREE.Vector3(-2.728, -1.106, -0.261),
-      target:   new THREE.Vector3(-3.267, -1.541, 0.460),
-      autoRotate: false,
-    },
-    room13: {
-      name: 'Bara Technicka mistnost',
-      position: new THREE.Vector3(-0.362, -1.207, -0.212),
-      target:   new THREE.Vector3(0.065, -1.451, 0.658),
       autoRotate: false,
     },
     room14: {
@@ -497,6 +547,7 @@
     a.addEventListener('click', () => {
       setActive(li);
       goToView(key);
+      setRoomName(key);
       toggleOverlay(false);
     });
     li.appendChild(a);
@@ -641,6 +692,12 @@
   const menuBtn = document.getElementById('menu-btn');
   const overlay = document.getElementById('overlay');
 
+  const roomNameEl = document.getElementById('room-name');
+
+  function setRoomName(key) {
+    roomNameEl.textContent = VIEWS[key].name;
+  }
+
   function toggleOverlay(open) {
     menuBtn.classList.toggle('open', open);
     overlay.classList.toggle('open', open);
@@ -648,6 +705,29 @@
 
   menuBtn.addEventListener('click', () => toggleOverlay(!overlay.classList.contains('open')));
   overlay.addEventListener('click', e => { if (e.target === overlay) toggleOverlay(false); });
+
+  // ─── ROOM NAV ARROWS ─────────────────────────────────────────────────────────
+  const viewKeys = Object.keys(VIEWS);
+  let currentViewIndex = 0;
+
+  function navigateRoom(delta) {
+    currentViewIndex = (currentViewIndex + delta + viewKeys.length) % viewKeys.length;
+    const key = viewKeys[currentViewIndex];
+    const li = listEl.children[currentViewIndex];
+    setActive(li);
+    goToView(key);
+    setRoomName(key);
+  }
+
+  document.getElementById('room-prev').addEventListener('click', () => navigateRoom(-1));
+  document.getElementById('room-next').addEventListener('click', () => navigateRoom(1));
+
+  // Keep currentViewIndex in sync when clicking list items
+  listEl.addEventListener('click', e => {
+    const li = e.target.closest('li');
+    if (!li) return;
+    currentViewIndex = Array.from(listEl.children).indexOf(li);
+  });
 </script>
 </body>
 </html>
