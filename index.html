@@ -366,8 +366,9 @@
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1;
+  renderer.toneMappingExposure = 1.2;
   document.body.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
@@ -509,14 +510,30 @@
   });
 
   // ─── LIGHTS ─────────────────────────────────────────────────────────────────
-  scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-  const sun = new THREE.DirectionalLight(0xffffff, 3);
-  sun.position.set(10, 20, 10);
+  scene.add(new THREE.AmbientLight(0xc8d8ff, 0.4));
+
+  const sun = new THREE.DirectionalLight(0xfff4e0, 4);
+  sun.position.set(15, 25, 10);
   sun.castShadow = true;
+  sun.shadow.mapSize.width  = 2048;
+  sun.shadow.mapSize.height = 2048;
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far  = 80;
+  sun.shadow.camera.left   = -20;
+  sun.shadow.camera.right  =  20;
+  sun.shadow.camera.top    =  20;
+  sun.shadow.camera.bottom = -20;
+  sun.shadow.bias = -0.001;
   scene.add(sun);
-  const fill = new THREE.DirectionalLight(0xaaccff, 1);
-  fill.position.set(-10, 5, -10);
+
+  // cool sky fill from the opposite side — simulates bounce light from sky
+  const fill = new THREE.DirectionalLight(0x7ab0ff, 0.6);
+  fill.position.set(-10, 8, -10);
   scene.add(fill);
+
+  // warm ground bounce
+  const bounce = new THREE.HemisphereLight(0x8ab0ff, 0x7a5f3a, 0.5);
+  scene.add(bounce);
 
   // ─── MODEL ──────────────────────────────────────────────────────────────────
   new GLTFLoader().load('vinary4.glb', (gltf) => {
