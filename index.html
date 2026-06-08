@@ -112,7 +112,7 @@
   const VIEWS = {
     global: {
       name: 'Global View',
-      position: new THREE.Vector3(15, 10, 15),
+      position: new THREE.Vector3(10, 5, 10),
       target:   new THREE.Vector3(0, 0, 0),
       autoRotate: true,
     },
@@ -217,7 +217,6 @@
     model.position.sub(center);
     scene.add(model);
 
-    VIEWS.global.position.set(maxDim * 1.2, maxDim * 0.7, maxDim * 1.2);
     camera.position.copy(VIEWS.global.position);
     orbit.update();
   });
@@ -267,10 +266,13 @@
     coordsEl.style.display = 'block';
     crosshair.style.display = 'block';
     lockHint.style.display  = 'block';
-    // Sync free-mode angles from current camera orientation
+    // Derive yaw/pitch from the actual look direction — avoids Euler order issues
+    const dir = new THREE.Vector3();
+    camera.getWorldDirection(dir);
+    freeYaw   = Math.atan2(-dir.x, -dir.z);
+    freePitch = Math.asin(Math.max(-1, Math.min(1, dir.y)));
     camera.rotation.order = 'YXZ';
-    freeYaw   = camera.rotation.y;
-    freePitch = camera.rotation.x;
+    camera.rotation.set(freePitch, freeYaw, 0);
     renderer.domElement.addEventListener('click', requestLock);
   }
 
