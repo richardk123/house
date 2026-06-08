@@ -10,72 +10,112 @@
     canvas { display: block; cursor: grab; }
     canvas.dragging { cursor: grabbing; }
 
-    #ui {
+    /* ── FAB ── */
+    #menu-btn {
       position: fixed;
-      bottom: 32px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      z-index: 10;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    #ui button {
-      padding: 10px 18px;
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 8px;
-      background: rgba(10, 10, 30, 0.75);
+      bottom: 28px;
+      right: 24px;
+      z-index: 30;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(255,255,255,0.12);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       color: #fff;
-      font-size: 13px;
+      font-size: 20px;
       cursor: pointer;
-      backdrop-filter: blur(8px);
-      transition: background 0.2s, border-color 0.2s;
-      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.45);
+      transition: background 0.2s, transform 0.25s;
     }
-    #ui button:hover  { background: rgba(60,100,200,0.5); border-color: rgba(100,160,255,0.6); }
-    #ui button.active { background: rgba(60,100,200,0.8); border-color: rgba(100,160,255,0.9); }
+    #menu-btn:hover { background: rgba(255,255,255,0.2); }
+    #menu-btn.open  { transform: rotate(45deg); background: rgba(255,255,255,0.18); }
 
-    #coords {
-      display: none;
+    /* ── Full-screen overlay ── */
+    #overlay {
       position: fixed;
-      top: 20px;
-      left: 20px;
-      background: rgba(0,0,0,0.6);
-      color: #0f0;
-      font-family: monospace;
-      font-size: 13px;
-      padding: 12px 16px;
-      border-radius: 8px;
-      backdrop-filter: blur(6px);
-      line-height: 1.8;
-      z-index: 10;
+      inset: 0;
+      z-index: 25;
+      background: rgba(6, 6, 20, 0.82);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
       pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    #overlay.open {
+      opacity: 1;
+      pointer-events: all;
     }
 
-    #coords-copy {
-      display: block;
-      margin-top: 10px;
-      padding: 5px 10px;
-      background: rgba(0,200,0,0.15);
-      border: 1px solid rgba(0,200,0,0.4);
-      border-radius: 5px;
-      color: #0f0;
-      font-family: monospace;
-      font-size: 12px;
+    #overlay-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.35);
+      margin-bottom: 20px;
+    }
+
+    #view-list {
+      list-style: none;
+      width: min(360px, 88vw);
+      max-height: 75vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    #view-list::-webkit-scrollbar { display: none; }
+
+    #view-list li {
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+    #view-list li:last-child { border-bottom: none; }
+
+    #view-list li a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 4px;
+      color: rgba(255,255,255,0.75);
+      text-decoration: none;
+      font-size: 15px;
+      font-weight: 400;
       cursor: pointer;
-      pointer-events: all;
-      width: 100%;
-      text-align: center;
+      transition: color 0.15s, padding-left 0.15s;
+    }
+    #view-list li a::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      flex-shrink: 0;
       transition: background 0.15s;
     }
-    #coords-copy:hover { background: rgba(0,200,0,0.3); }
+    #view-list li a:hover,
+    #view-list li a:hover::before { color: #fff; background: #6c8fff; padding-left: 4px; }
+    #view-list li.active a       { color: #fff; font-weight: 500; }
+    #view-list li.active a::before { background: #6c8fff; }
+
+    #coords { display: none !important; }
   </style>
 </head>
 <body>
 
-<div id="ui"></div>
+<div id="overlay">
+  <p id="overlay-title">Vyberte pohled</p>
+  <ul id="view-list"></ul>
+</div>
+<button id="menu-btn">&#9776;</button>
 <div id="coords"><div id="coords-text"></div><button id="coords-copy">Copy to clipboard</button></div>
 
 <script type="importmap">
@@ -355,22 +395,28 @@
     orbit.update();
   });
 
-  // ─── UI — buttons generated from VIEWS ──────────────────────────────────────
-  const uiEl = document.getElementById('ui');
-  let activeBtn = null;
+  // ─── UI — list items generated from VIEWS ───────────────────────────────────
+  const listEl = document.getElementById('view-list');
+  let activeLi = null;
 
-  function setActive(btn) {
-    if (activeBtn) activeBtn.classList.remove('active');
-    activeBtn = btn;
-    if (btn) btn.classList.add('active');
+  function setActive(li) {
+    if (activeLi) activeLi.classList.remove('active');
+    activeLi = li;
+    if (li) li.classList.add('active');
   }
 
   Object.entries(VIEWS).forEach(([key, view]) => {
-    const btn = document.createElement('button');
-    btn.textContent = view.name;
-    btn.addEventListener('click', () => { setActive(btn); goToView(key); });
-    uiEl.appendChild(btn);
-    if (key === 'global') setActive(btn);
+    const li = document.createElement('li');
+    const a  = document.createElement('a');
+    a.textContent = view.name;
+    a.addEventListener('click', () => {
+      setActive(li);
+      goToView(key);
+      toggleOverlay(false);
+    });
+    li.appendChild(a);
+    listEl.appendChild(li);
+    if (key === 'global') setActive(li);
   });
 
   // ─── CAMERA ANIMATION ───────────────────────────────────────────────────────
@@ -471,6 +517,18 @@
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
+
+  // ─── OVERLAY ─────────────────────────────────────────────────────────────────
+  const menuBtn = document.getElementById('menu-btn');
+  const overlay = document.getElementById('overlay');
+
+  function toggleOverlay(open) {
+    menuBtn.classList.toggle('open', open);
+    overlay.classList.toggle('open', open);
+  }
+
+  menuBtn.addEventListener('click', () => toggleOverlay(!overlay.classList.contains('open')));
+  overlay.addEventListener('click', e => { if (e.target === overlay) toggleOverlay(false); });
 </script>
 </body>
 </html>
