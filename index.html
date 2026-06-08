@@ -107,6 +107,42 @@
     #view-list li.active a::before { background: #6c8fff; }
 
     #coords { display: none !important; }
+
+    /* ── D-pad ── */
+    #dpad {
+      display: none;
+      position: fixed;
+      bottom: 28px;
+      left: 24px;
+      z-index: 20;
+      width: 120px;
+      height: 120px;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #dpad.visible { display: grid; }
+    #dpad {
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 4px;
+    }
+    .dp {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.7);
+      font-size: 16px;
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      transition: background 0.1s;
+      touch-action: none;
+    }
+    .dp:empty { background: transparent; border-color: transparent; pointer-events: none; }
+    .dp.pressed { background: rgba(108,143,255,0.45); border-color: rgba(108,143,255,0.6); }
   </style>
 </head>
 <body>
@@ -114,6 +150,17 @@
 <div id="overlay">
   <p id="overlay-title">Vyberte pohled</p>
   <ul id="view-list"></ul>
+</div>
+<div id="dpad">
+  <div class="dp"></div>
+  <div class="dp" data-key="w">▲</div>
+  <div class="dp"></div>
+  <div class="dp" data-key="a">◀</div>
+  <div class="dp" data-key="s">▼</div>
+  <div class="dp" data-key="d">▶</div>
+  <div class="dp"></div>
+  <div class="dp"></div>
+  <div class="dp"></div>
 </div>
 <button id="menu-btn">&#9776;</button>
 <div id="coords"><div id="coords-text"></div><button id="coords-copy">Copy to clipboard</button></div>
@@ -317,6 +364,8 @@
     });
   });
 
+  const dpad = document.getElementById('dpad');
+
   function enterFPS() {
     fpsMode = true;
     orbit.enabled = false;
@@ -326,16 +375,18 @@
     pitch = Math.asin(Math.max(-1, Math.min(1, dir.y)));
     camera.rotation.order = 'YXZ';
     camera.rotation.set(pitch, yaw, 0);
-    // Initialize lastPos/lastTarget immediately so copy works without moving first
     lastPos.copy(camera.position);
     lastTarget.set(camera.position.x + dir.x, camera.position.y + dir.y, camera.position.z + dir.z);
     coordsEl.style.display = 'block';
+    dpad.classList.add('visible');
   }
 
   function exitFPS() {
     fpsMode = false;
     orbit.enabled = true;
     coordsEl.style.display = 'none';
+    dpad.classList.remove('visible');
+    keys.w = keys.a = keys.s = keys.d = false;
   }
 
   // Mouse look — only while button held
@@ -356,6 +407,40 @@
     pitch -= e.movementY * 0.003;
     pitch  = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
     camera.rotation.set(pitch, yaw, 0);
+  });
+
+  // Touch look — single finger drag on canvas
+  let touchLook = null;
+  renderer.domElement.addEventListener('touchstart', e => {
+    if (!fpsMode) return;
+    // only track touches that didn't start on the dpad
+    const t = e.changedTouches[0];
+    if (document.elementFromPoint(t.clientX, t.clientY).closest('#dpad')) return;
+    e.preventDefault();
+    touchLook = { id: t.identifier, x: t.clientX, y: t.clientY };
+  }, { passive: false });
+
+  renderer.domElement.addEventListener('touchmove', e => {
+    if (!fpsMode || !touchLook) return;
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== touchLook.id) continue;
+      const dx = t.clientX - touchLook.x;
+      const dy = t.clientY - touchLook.y;
+      yaw   -= dx * 0.005;
+      pitch -= dy * 0.005;
+      pitch  = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, pitch));
+      camera.rotation.set(pitch, yaw, 0);
+      touchLook.x = t.clientX;
+      touchLook.y = t.clientY;
+    }
+  }, { passive: false });
+
+  renderer.domElement.addEventListener('touchend', e => {
+    if (!touchLook) return;
+    for (const t of e.changedTouches) {
+      if (t.identifier === touchLook.id) touchLook = null;
+    }
   });
 
   // WASD — only in FPS mode
@@ -516,6 +601,40 @@
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // ─── D-PAD touch ────────────────────────────────────────────────────────────
+  const dpTouches = {}; // touchId → key
+
+  dpad.addEventListener('touchstart', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      const el = document.elementFromPoint(t.clientX, t.clientY);
+      const k = el?.dataset?.key;
+      if (!k) continue;
+      dpTouches[t.identifier] = k;
+      keys[k] = true;
+      el.classList.add('pressed');
+    }
+  }, { passive: false });
+
+  dpad.addEventListener('touchend', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      const k = dpTouches[t.identifier];
+      if (!k) continue;
+      keys[k] = false;
+      delete dpTouches[t.identifier];
+      dpad.querySelector(`[data-key="${k}"]`)?.classList.remove('pressed');
+    }
+  }, { passive: false });
+
+  dpad.addEventListener('touchcancel', e => {
+    for (const t of e.changedTouches) {
+      const k = dpTouches[t.identifier];
+      if (k) { keys[k] = false; delete dpTouches[t.identifier]; }
+    }
+    dpad.querySelectorAll('.dp').forEach(el => el.classList.remove('pressed'));
   });
 
   // ─── OVERLAY ─────────────────────────────────────────────────────────────────
